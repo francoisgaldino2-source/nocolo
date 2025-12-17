@@ -12,5 +12,5 @@ if (container) {
     </React.StrictMode>
   );
 } else {
-  console.error("Erro Fatal: Elemento #root não encontrado no DOM.");
+  console.error("Erro: Elemento #root não encontrado. Verifique o seu index.html.");
 }
