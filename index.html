@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Ninho - Maternidade Leve</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Global Error Handler to debug blank screens on mobile/preview
+      window.addEventListener('error', function(e) {
+        const errorContainer = document.getElementById('root');
+        if (errorContainer && errorContainer.innerHTML === '') {
+           const msg = document.createElement('div');
+           msg.style.cssText = "position:fixed; top:0; left:0; right:0; padding:20px; background:#fee2e2; color:#991b1b; font-family:sans-serif; z-index:9999;";
+           msg.innerHTML = "<strong>Erro de Inicialização:</strong><br>" + e.message;
+           document.body.appendChild(msg);
+        }
+      });
+
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              nude: {
+                50: '#fdf8f6',
+                100: '#f2e8e5',
+                200: '#eaddd7',
+                300: '#e0cec7',
+                500: '#bfa094',
+                800: '#5d4037',
+              },
+              rose: {
+                50: '#fff1f2',
+                100: '#ffe4e6',
+                200: '#fecdd3',
+                300: '#fda4af',
+                400: '#fb7185',
+                500: '#f43f5e',
+              },
+              sky: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+              },
+              sage: {
+                50: '#f2fcf5',
+                100: '#e6f7eb',
+                200: '#ccebd6',
+                500: '#68b383',
+              }
+            },
+            fontFamily: {
+              sans: ['Nunito', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            },
+            animation: {
+              'breathe': 'breathe 8s infinite ease-in-out',
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              breathe: {
+                '0%, 100%': { transform: 'scale(1)', opacity: '0.8' },
+                '50%': { transform: 'scale(1.5)', opacity: '0.4' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Nunito', sans-serif;
+        background-color: #fdf8f6; /* nude-50 */
+        overscroll-behavior-y: none;
+      }
+      /* Hide scrollbar for clean UI */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.88.0",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

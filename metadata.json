@@ -1,0 +1,8 @@
+{
+  "name": "Ninho - Maternidade Leve",
+  "description": "Um refúgio digital para mães. Acompanhamento do bebê, apoio emocional com IA, diário e relaxamento em um ambiente visualmente acolhedor.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
