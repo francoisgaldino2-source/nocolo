@@ -42,16 +42,16 @@
       }
       #root { min-height: 100vh; }
       
-      /* Placeholder de carregamento enquanto o JS não monta */
+      /* Placeholder de carregamento */
       #root:empty::after {
-        content: "Carregando Ninho...";
+        content: "Iniciando o Ninho...";
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100vh;
         color: #bfa094;
         font-weight: bold;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         animation: pulse 1.5s infinite;
       }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
