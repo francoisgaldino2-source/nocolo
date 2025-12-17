@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Ninho - Maternidade Leve</title>
     <script>
-      // Suprime avisos do Tailwind CDN no console para uma experiência mais limpa
+      // Suprime avisos do Tailwind CDN no console
       (function() {
         const originalWarn = console.warn;
         console.warn = function(...args) {
@@ -27,7 +27,7 @@
               sky: { 50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9' },
               sage: { 50: '#f2fcf5', 100: '#e6f7eb', 200: '#ccebd6', 500: '#68b383' }
             },
-            fontFamily: { sans: ['Nunito', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+            fontFamily: { sans: ['Nunito', 'sans-serif'] },
             animation: { 'breathe': 'breathe 8s infinite ease-in-out', 'float': 'float 6s ease-in-out infinite' },
             keyframes: {
               breathe: { '0%, 100%': { transform: 'scale(1)', opacity: '0.8' }, '50%': { transform: 'scale(1.5)', opacity: '0.4' } },
@@ -42,16 +42,31 @@
       body { 
         font-family: 'Nunito', sans-serif; 
         background-color: #fdf8f6; 
-        overscroll-behavior-y: none;
         margin: 0;
         padding: 0;
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
       }
+      #root { min-height: 100vh; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      /* Fade in suave para a montagem da aplicação */
-      #root { opacity: 0; animation: fadeInRoot 0.5s ease-out forwards; }
-      @keyframes fadeInRoot { from { opacity: 0; } to { opacity: 1; } }
+      /* Prevenção de tela branca durante o carregamento do módulo */
+      #root:empty::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f2e8e5;
+        border-top: 4px solid #bfa094;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin: -20px 0 0 -20px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
   <script type="importmap">
 {
@@ -71,7 +86,5 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- O sistema importa o index.tsx automaticamente. 
-         NÃO adicione tags <script type="module" src="/index.tsx"> manualmente. -->
   </body>
 </html>

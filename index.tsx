@@ -2,15 +2,12 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
-const container = document.getElementById('root');
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Falha ao encontrar o elemento root');
 
-if (!container) {
-  console.error("Erro crítico: Elemento #root não encontrado no DOM.");
-} else {
-  const root = createRoot(container);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-}
+const root = createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
