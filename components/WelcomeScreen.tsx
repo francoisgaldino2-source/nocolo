@@ -32,7 +32,9 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
   // LOGIN FLOW
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (accessCode === 'ADMIN123') {
+    
+    // Interceptação do Código Admin - Atualizado para ADMIN8186
+    if (accessCode.trim().toUpperCase() === 'ADMIN8186') {
         onAdminLogin();
         return;
     }
@@ -40,10 +42,10 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
     setError('');
     setIsLoading(true);
     
-    const userData = await storageService.login(accessCode.toUpperCase());
+    const userData = await storageService.login(accessCode.trim().toUpperCase());
     
     if (userData) {
-        onLoginSuccess(accessCode.toUpperCase(), userData.profile);
+        onLoginSuccess(accessCode.trim().toUpperCase(), userData.profile);
     } else {
         setError('Código inválido ou não encontrado.');
         setIsLoading(false);
