@@ -6,6 +6,15 @@
     <title>Ninho - Maternidade Leve</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // Suprime o aviso de produção do Tailwind
+      if (typeof console !== 'undefined' && console.warn) {
+        const originalWarn = console.warn;
+        console.warn = (...args) => {
+          if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+          originalWarn.apply(console, args);
+        };
+      }
+
       tailwind.config = {
         theme: {
           extend: {
@@ -49,6 +58,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

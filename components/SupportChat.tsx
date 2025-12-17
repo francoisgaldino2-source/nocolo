@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { CommunityMessage, BabyProfile } from '../types';
 import { storageService } from '../services/storageService';
@@ -22,7 +23,7 @@ const SupportChat: React.FC<Props> = ({ themeColor, babyProfile }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Carregar mensagens ao montar o componente
+  // Carregar mensagens ao montar e polling a cada 5s
   useEffect(() => {
       const loadMessages = async () => {
           const msgs = await storageService.getCommunityMessages();
@@ -30,8 +31,7 @@ const SupportChat: React.FC<Props> = ({ themeColor, babyProfile }) => {
       };
       loadMessages();
       
-      // Polling simples para novas mensagens (a cada 10s)
-      const interval = setInterval(loadMessages, 10000);
+      const interval = setInterval(loadMessages, 5000); // Polling Supabase
       return () => clearInterval(interval);
   }, []);
 
@@ -61,7 +61,6 @@ const SupportChat: React.FC<Props> = ({ themeColor, babyProfile }) => {
     await storageService.addCommunityMessage(newMsg);
   };
 
-  // Cores aleatórias consistentes para nomes de outras mães
   const getNameColor = (name: string) => {
     const colors = ['text-orange-500', 'text-purple-500', 'text-pink-500', 'text-blue-500', 'text-teal-500'];
     let hash = 0;
@@ -73,7 +72,7 @@ const SupportChat: React.FC<Props> = ({ themeColor, babyProfile }) => {
 
   return (
     <div className="h-full flex flex-col bg-[#e5ddd5] pb-20 pt-0 animate-fade-in relative">
-      {/* Background Pattern Overlay (Sutil) */}
+      {/* Background Pattern Overlay */}
       <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{
           backgroundImage: `url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")`,
           backgroundSize: '400px'

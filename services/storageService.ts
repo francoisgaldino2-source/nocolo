@@ -1,77 +1,78 @@
+
+import { createClient } from '@supabase/supabase-js';
 import { UserData, BabyProfile, LogEntry, Product, CommunityMessage, GrowthRecord } from '../types';
 import { MOCK_PRODUCTS } from '../constants';
-import { createClient } from '@supabase/supabase-js';
 
-// Configuração Direta do Supabase (Frontend)
-const SUPABASE_URL = 'https://prhwjgwpaprpptkcydri.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaHdqZ3dwYXBycHB0a2N5ZHJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MjI1NzgsImV4cCI6MjA4MTQ5ODU3OH0.TrSabKmf1o_htaoihRGNgtuSXK6nmCsifasYm5QRBhA';
+// Configuração do Supabase (Mesmas credenciais do arquivo api.ts original)
+const supabaseUrl = 'https://prhwjgwpaprpptkcydri.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaHdqZ3dwYXBycHB0a2N5ZHJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MjI1NzgsImV4cCI6MjA4MTQ5ODU3OH0.TrSabKmf1o_htaoihRGNgtuSXK6nmCsifasYm5QRBhA';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const getLocal = (key: string) => {
-    try {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
-    } catch (e) { return null; }
-};
-
-const setLocal = (key: string, data: any) => {
-    try {
-        localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) { console.error("Erro ao salvar local", e); }
-};
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const storageService = {
+  // Verifica conexão com o banco
   checkConnection: async (): Promise<{ online: boolean; message: string }> => {
     try {
-        const start = Date.now();
-        const { error } = await supabase.from('app_users').select('code').limit(1);
-        const duration = Date.now() - start;
-        if (error) throw error;
-        return { online: true, message: `Conectado ao Supabase (${duration}ms)` };
+      const { data, error } = await supabase.from('app_users').select('count', { count: 'exact', head: true });
+      if (error) throw error;
+      return { online: true, message: "Conectado ao Supabase" };
     } catch (e: any) {
-        return { online: false, message: "Modo Offline ou Erro de Conexão" };
+      console.error("Database Check Error:", e);
+      return { online: false, message: "Erro de conexão" };
     }
   },
 
+  // Gera um código único e cria o registro inicial no banco
   generateCode: async (): Promise<string> => {
-    const code = 'NH-' + Math.random().toString(36).substr(2, 5).toUpperCase();
-    try {
-        const { error } = await supabase
-            .from('app_users')
-            .insert([{ code, profile: null, logs: [], growth_records: [] }]);
-        if (error) throw error;
-    } catch (e) {
-        console.warn("Offline mode: Code generated locally only");
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    
+    // Insere no Supabase
+    const { error } = await supabase
+        .from('app_users')
+        .insert([{ 
+            code, 
+            profile: null, 
+            logs: [], 
+            growth_records: [] 
+        }]);
+
+    if (error) {
+        console.error("Erro ao gerar código:", error);
+        throw new Error("Falha ao criar usuário no banco.");
+    }
+    
     return code;
   },
 
+  // Busca todos os clientes (Para o Painel Admin)
   getAllClients: async () => {
-    try {
-        const { data, error } = await supabase
-            .from('app_users')
-            .select('code, profile, created_at');
-
-        if (error) throw error;
-
-        return data.map((row: any) => ({
-            code: row.code,
-            data: { profile: row.profile },
-            createdAt: row.created_at
-        }));
-    } catch (e) {
-        return [];
-    }
+    const { data, error } = await supabase
+        .from('app_users')
+        .select('*');
+    
+    if (error) return [];
+    
+    // Mapeia para formato amigável
+    return data.map(row => ({
+        code: row.code,
+        createdAt: row.created_at,
+        data: {
+            profile: row.profile
+        }
+    }));
   },
 
   getProducts: (): Product[] => {
     return MOCK_PRODUCTS;
   },
 
-  login: async (code: string): Promise<UserData | null> => {
-    let remoteData = null;
-    const localKey = `ninho_data_${code}`;
+  // Realiza Login buscando pelo código
+  login: async (code?: string): Promise<UserData | null> => {
+    if (!code) return null;
 
     try {
         const { data, error } = await supabase
@@ -80,59 +81,35 @@ export const storageService = {
             .eq('code', code)
             .single();
 
-        if (!error && data) {
-            remoteData = {
-                profile: data.profile ? {
-                    ...data.profile,
-                    birthDate: new Date(data.profile.birthDate)
-                } : null,
-                logs: (data.logs || []).map((l: any) => ({
-                    ...l,
-                    timestamp: new Date(l.timestamp),
-                    endTime: l.endTime ? new Date(l.endTime) : undefined
-                })),
-                growthRecords: (data.growth_records || []).map((r: any) => ({
-                    ...r,
-                    date: new Date(r.date)
-                })),
-                messages: [],
-                createdAt: data.created_at
-            };
-            setLocal(localKey, remoteData);
-        }
-    } catch (e) {
-        console.warn("Offline, buscando cache...");
-    }
+        if (error || !data) return null;
 
-    if (!remoteData) {
-        const localData = getLocal(localKey);
-        if (localData) {
-            return {
-                ...localData,
-                profile: localData.profile ? {
-                    ...localData.profile,
-                    birthDate: new Date(localData.profile.birthDate)
-                } : null,
-                logs: (localData.logs || []).map((l: any) => ({
-                    ...l,
-                    timestamp: new Date(l.timestamp),
-                    endTime: l.endTime ? new Date(l.endTime) : undefined
-                })),
-                growthRecords: (localData.growthRecords || []).map((r: any) => ({
-                    ...r,
-                    date: new Date(r.date)
-                })),
-            };
-        }
+        // Parse dos dados vindos do banco
+        return {
+            profile: data.profile ? {
+                ...data.profile,
+                birthDate: new Date(data.profile.birthDate)
+            } : null,
+            logs: (data.logs || []).map((l: any) => ({
+                ...l,
+                timestamp: new Date(l.timestamp),
+                endTime: l.endTime ? new Date(l.endTime) : undefined
+            })),
+            growthRecords: (data.growth_records || []).map((r: any) => ({
+                ...r,
+                date: new Date(r.date)
+            })),
+            messages: [], // Chat é carregado separadamente
+            createdAt: data.created_at
+        };
+    } catch (e) {
+        console.error("Login Error:", e);
+        return null;
     }
-    return remoteData;
   },
 
-  saveUserData: async (code: string, data: Partial<UserData>) => {
-    const localKey = `ninho_data_${code}`;
-    const currentLocal = getLocal(localKey) || {};
-    const updatedLocal = { ...currentLocal, ...data };
-    setLocal(localKey, updatedLocal);
+  // Salva dados do usuário
+  saveUserData: async (code: string | null, data: Partial<UserData>) => {
+    if (!code) return; // Não salva se não tiver código (modo local restrito)
 
     try {
         const updates: any = {};
@@ -140,53 +117,47 @@ export const storageService = {
         if (data.logs) updates.logs = data.logs;
         if (data.growthRecords) updates.growth_records = data.growthRecords;
 
-        if (Object.keys(updates).length > 0) {
-            await supabase
-                .from('app_users')
-                .update(updates)
-                .eq('code', code);
-        }
+        await supabase
+            .from('app_users')
+            .update(updates)
+            .eq('code', code);
+            
     } catch (e) {
-        console.warn("Sync pendente (offline)");
+        console.error("Save Error:", e);
     }
   },
 
-  getCommunityMessages: async (): Promise<CommunityMessage[]> => {
-      try {
-        // Calcula a data de 24 horas atrás
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // --- CHAT COMUNITÁRIO ---
 
-        const { data, error } = await supabase
-            .from('community_messages')
-            .select('*')
-            .gt('timestamp', oneDayAgo) // Filtra mensagens maiores que (mais recentes que) 24h atrás
-            .order('timestamp', { ascending: true })
-            .limit(50);
-            
-        if (error) throw error;
-        return (data || []).map((row: any) => ({
-            id: row.id,
-            authorName: row.author_name,
-            text: row.text,
-            timestamp: new Date(row.timestamp),
-            isUser: row.is_user,
-            avatarColor: row.avatar_color
-        }));
-      } catch (e) { return []; }
+  getCommunityMessages: async (): Promise<CommunityMessage[]> => {
+      const { data, error } = await supabase
+        .from('community_messages')
+        .select('*')
+        .order('timestamp', { ascending: true }) // Antigas primeiro (ordem cronológica de chat)
+        .limit(50);
+
+      if (error || !data) return [];
+
+      return data.map((msg: any) => ({
+          id: msg.id,
+          authorName: msg.author_name,
+          text: msg.text,
+          timestamp: new Date(msg.timestamp),
+          isUser: msg.is_user, // Nota: num app real, compararíamos ID do user. Aqui simplificamos.
+          avatarColor: msg.avatar_color
+      }));
   },
 
   addCommunityMessage: async (msg: CommunityMessage) => {
-      try {
-          await supabase
-            .from('community_messages')
-            .insert([{
-                id: msg.id,
-                author_name: msg.authorName,
-                text: msg.text,
-                timestamp: msg.timestamp,
-                is_user: msg.isUser,
-                avatar_color: msg.avatarColor
-            }]);
-      } catch (e) { console.error(e); }
+      await supabase
+        .from('community_messages')
+        .insert([{
+            id: msg.id,
+            author_name: msg.authorName,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            is_user: msg.isUser,
+            avatar_color: msg.avatarColor
+        }]);
   }
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { View, BabyProfile, LogEntry, GrowthRecord } from './types';
 import { QUOTES, APP_LOGO } from './constants';
@@ -10,23 +11,23 @@ import Relaxation from './components/Relaxation';
 import SmartGuide from './components/SmartGuide';
 import FoodGuide from './components/FoodGuide';
 import GrowthCheck from './components/GrowthCheck';
-import AdminPanel from './components/AdminPanel';
 import DailyProgressSummary from './components/DailyProgressSummary';
-import { Sun, Utensils, LogOut, Heart } from 'lucide-react';
+import VirtualFittingRoom from './components/VirtualFittingRoom';
+import BabyMonitor from './components/BabyMonitor';
+import BabyStore from './components/BabyStore';
+import AdminPanel from './components/AdminPanel';
+import { Sun, Utensils, LogOut, Heart, Sparkles, Moon, ShoppingBag } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [userCode, setUserCode] = useState<string | null>(null);
   const [view, setView] = useState<View>(View.WELCOME);
   
-  // Auth State
-  const [currentCode, setCurrentCode] = useState<string | null>(null);
-
   // User Data State
   const [baby, setBaby] = useState<BabyProfile | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [growthRecords, setGrowthRecords] = useState<GrowthRecord[]>([]);
   const [themeColor, setThemeColor] = useState<'rose' | 'sky'>('rose');
   const [imgError, setImgError] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(false);
   
   const [quote, setQuote] = useState(QUOTES[0]);
 
@@ -49,10 +50,10 @@ const App: React.FC = () => {
 
   // PERSISTENCE: Auto-save when key data changes
   useEffect(() => {
-    if (currentCode && view !== View.ADMIN && view !== View.WELCOME && !isLoadingData) {
-        // Debounce simple para não salvar a cada tecla
+    if (userCode && baby) {
+        // Debounce simple
         const timer = setTimeout(() => {
-            storageService.saveUserData(currentCode, {
+            storageService.saveUserData(userCode, {
                 profile: baby,
                 logs: logs,
                 growthRecords: growthRecords,
@@ -60,43 +61,38 @@ const App: React.FC = () => {
         }, 1000);
         return () => clearTimeout(timer);
     }
-  }, [baby, logs, growthRecords, currentCode, view, isLoadingData]);
+  }, [baby, logs, growthRecords, userCode]);
 
   const handleLoginSuccess = async (code: string, profile: BabyProfile | null) => {
-    setIsLoadingData(true);
-    setCurrentCode(code);
+    setUserCode(code);
     
-    // Tenta carregar dados existentes do banco
-    const existingData = await storageService.login(code);
-    
-    if (existingData) {
-        // Se temos dados no banco, usamos eles
-        if (existingData.profile) setBaby(existingData.profile);
+    // Se o login retornou perfil, carrega. Se não (novo usuário), profile vem do setup.
+    if (profile) {
+        setBaby(profile);
         
-        // Se o profile veio do argumento (recém criado no WelcomeScreen) e não tinha no banco antes
-        if (profile && !existingData.profile) {
-            setBaby(profile);
-            // Salva imediatamente para garantir
-            await storageService.saveUserData(code, { profile });
+        // Se for um login (não setup), precisamos carregar os logs antigos se não vieram no login inicial
+        // (Nota: no storageService.login atual, ele já retorna logs, então está ok)
+        const fullData = await storageService.login(code);
+        if (fullData) {
+            setLogs(fullData.logs);
+            setGrowthRecords(fullData.growthRecords);
         }
         
-        setLogs(existingData.logs || []);
-        setGrowthRecords(existingData.growthRecords || []);
-    } else if (profile) {
-        // Fallback: se o login retornou null (ex: offline), mas temos perfil local
-        setBaby(profile);
+        setView(View.DASHBOARD);
+    } else {
+        // Caso de borda: logou mas não tem perfil (não deve acontecer com o fluxo atual)
+        setView(View.WELCOME); 
     }
-
-    setIsLoadingData(false);
-    setView(View.DASHBOARD);
   };
 
   const handleLogout = () => {
-    setCurrentCode(null);
-    setBaby(null);
-    setLogs([]);
-    setGrowthRecords([]);
-    setView(View.WELCOME);
+    if (confirm("Deseja sair? Você precisará do seu código para entrar novamente.")) {
+        setUserCode(null);
+        setBaby(null);
+        setLogs([]);
+        setGrowthRecords([]);
+        setView(View.WELCOME);
+    }
   };
 
   const handleAddLog = (log: LogEntry) => {
@@ -112,7 +108,6 @@ const App: React.FC = () => {
   const bgAccentClass = themeColor === 'sky' ? 'bg-sky-100' : 'bg-rose-100';
   const textAccentClass = themeColor === 'sky' ? 'text-sky-500' : 'text-rose-500';
 
-  // Render Logic
   if (view === View.WELCOME) {
     return (
         <WelcomeScreen 
@@ -124,14 +119,6 @@ const App: React.FC = () => {
 
   if (view === View.ADMIN) {
       return <AdminPanel onLogout={() => setView(View.WELCOME)} />;
-  }
-
-  if (isLoadingData) {
-      return (
-          <div className="min-h-screen flex items-center justify-center bg-nude-50">
-              <div className="animate-bounce text-rose-400 font-bold">Carregando seu ninho...</div>
-          </div>
-      );
   }
 
   const renderContent = () => {
@@ -173,7 +160,7 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            {/* Daily Progress Widget (New) */}
+            {/* Daily Progress Widget */}
             {baby && <DailyProgressSummary baby={baby} logs={logs} themeColor={themeColor} />}
 
             {/* Quick Actions Grid */}
@@ -188,16 +175,21 @@ const App: React.FC = () => {
                 </button>
             </div>
 
-            {/* Featured Section */}
-            <div className="bg-stone-800 rounded-3xl p-6 text-white mb-6 relative overflow-hidden shadow-lg">
-                <div className="relative z-10">
-                    <h3 className="font-bold text-lg mb-2">Precisa conversar?</h3>
-                    <p className="text-stone-300 text-sm mb-4 max-w-[90%]">Converse com outras mamães. Troque experiências e sinta o apoio de quem te entende.</p>
-                    <button onClick={() => setView(View.CHAT)} className="bg-white text-stone-900 px-6 py-2 rounded-xl font-bold text-sm hover:bg-stone-100 transition-colors">Ir para Comunidade</button>
-                </div>
-                <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-                    <Heart size={120} />
-                </div>
+            {/* Tools Grid */}
+            <h3 className="text-stone-700 font-bold mb-4 ml-1">Ferramentas Mágicas</h3>
+            <div className="grid grid-cols-3 gap-3 mb-8">
+                 <button onClick={() => setView(View.RELAX)} className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center gap-2 h-24 hover:bg-stone-50">
+                    <Sparkles className="text-purple-400" size={24} />
+                    <span className="text-[10px] font-bold text-stone-600 text-center">Provador IA</span>
+                 </button>
+                 <button onClick={() => setView(View.RELAX)} className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center gap-2 h-24 hover:bg-stone-50">
+                    <Moon className="text-indigo-400" size={24} />
+                    <span className="text-[10px] font-bold text-stone-600 text-center">Monitor</span>
+                 </button>
+                 <button onClick={() => setView(View.RELAX)} className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center gap-2 h-24 hover:bg-stone-50">
+                    <ShoppingBag className="text-rose-400" size={24} />
+                    <span className="text-[10px] font-bold text-stone-600 text-center">Lojinha</span>
+                 </button>
             </div>
 
             {/* Daily Tip */}
@@ -209,7 +201,21 @@ const App: React.FC = () => {
         );
       case View.DIARY: return <BabyDiary logs={logs} addLog={handleAddLog} themeColor={themeColor} baby={baby} />;
       case View.CHAT: return <SupportChat themeColor={themeColor} babyProfile={baby} />;
-      case View.RELAX: return <Relaxation />;
+      
+      // Manteve-se o componente composto para RELAX
+      case View.RELAX: 
+        return (
+            <div className="pb-20">
+                <VirtualFittingRoom />
+                <div className="h-4 bg-stone-50" />
+                <BabyMonitor />
+                <div className="h-4 bg-stone-50" />
+                <Relaxation />
+                <div className="h-4 bg-stone-50" />
+                <BabyStore />
+            </div>
+        );
+
       case View.GUIDE: return baby ? <SmartGuide baby={baby} themeColor={themeColor} /> : null;
       case View.GROWTH: return baby ? <GrowthCheck baby={baby} records={growthRecords} onAddRecord={handleAddGrowthRecord} /> : null;
       case View.NUTRITION: return <FoodGuide />;

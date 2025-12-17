@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { BabyProfile } from '../types';
 import { storageService } from '../services/storageService';
 import { APP_LOGO } from '../constants';
-import { Lock, ArrowRight, Loader2, Heart, User, Calendar, Baby, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Loader2, Heart, Copy, User, Baby, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
 interface Props {
   onLoginSuccess: (code: string, profile: BabyProfile | null) => void;
@@ -10,13 +11,13 @@ interface Props {
 }
 
 const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
-  // Step 0: Code Entry, Step 1: Profile Setup
-  const [step, setStep] = useState<0 | 1>(0);
+  const [step, setStep] = useState<'INITIAL' | 'LOGIN' | 'SETUP' | 'CODE_DISPLAY'>('INITIAL');
   
   // Login Data
-  const [code, setCode] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   
   // Setup Data
+  const [generatedCode, setGeneratedCode] = useState('');
   const [setupName, setSetupName] = useState('');
   const [setupDate, setSetupDate] = useState<Date | null>(null);
   const [setupGender, setSetupGender] = useState<'boy' | 'girl'>('girl');
@@ -28,43 +29,49 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  // STEP 0: Verify Code
-  const handleCodeSubmit = async (e: React.FormEvent) => {
+  // LOGIN FLOW
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-    
-    if (code.trim().toLowerCase() === 'admin8186') {
+    if (accessCode === 'ADMIN123') {
         onAdminLogin();
-        setIsLoading(false);
         return;
     }
-
-    const normalizedCode = code.toUpperCase().trim();
     
-    try {
-        const userData = await storageService.login(normalizedCode);
-        
-        if (userData) {
-          if (userData.profile) {
-            onLoginSuccess(normalizedCode, userData.profile);
-          } else {
-            setStep(1);
-          }
-        } else {
-          setError('Código inválido ou não encontrado.');
-        }
-    } catch (err) {
-        setError('Erro de conexão. Verifique sua internet.');
-    } finally {
+    setError('');
+    setIsLoading(true);
+    
+    const userData = await storageService.login(accessCode.toUpperCase());
+    
+    if (userData) {
+        onLoginSuccess(accessCode.toUpperCase(), userData.profile);
+    } else {
+        setError('Código inválido ou não encontrado.');
         setIsLoading(false);
     }
   };
 
-  // STEP 1: Save Profile
+  // CREATE ACCOUNT FLOW - Step 1: Generate Code
+  const handleGenerateCode = async () => {
+      setIsLoading(true);
+      try {
+          const code = await storageService.generateCode();
+          setGeneratedCode(code);
+          setStep('CODE_DISPLAY');
+      } catch (e) {
+          setError('Erro ao conectar com o servidor. Tente novamente.');
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
+  // CREATE ACCOUNT FLOW - Step 2: Save Profile
   const handleSetupSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
+      if (!setupName.trim()) {
+          setError('Por favor, digite o nome do bebê.');
+          return;
+      }
       if (!setupDate) {
           setError('Por favor, selecione a data de nascimento no calendário.');
           return;
@@ -78,15 +85,17 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
           gender: setupGender
       };
 
-      const normalizedCode = code.toUpperCase().trim();
-
       try {
-          await storageService.saveUserData(normalizedCode, { profile });
-          onLoginSuccess(normalizedCode, profile);
+          await storageService.saveUserData(generatedCode, { profile });
+          onLoginSuccess(generatedCode, profile);
       } catch (err) {
-          setError('Erro ao salvar dados. Tente novamente.');
+          setError('Erro ao salvar dados.');
           setIsLoading(false);
       }
+  };
+
+  const copyToClipboard = () => {
+      navigator.clipboard.writeText(generatedCode);
   };
 
   // --- Calendar Logic ---
@@ -96,7 +105,6 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
 
   const handleNextMonth = () => {
     const nextMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
-    // Impede ir para o futuro além do mês atual
     if (nextMonth <= new Date()) {
         setViewDate(nextMonth);
     }
@@ -112,17 +120,15 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
       const year = viewDate.getFullYear();
       const month = viewDate.getMonth();
       
-      const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday
+      const firstDayOfMonth = new Date(year, month, 1).getDay(); 
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
       const days = [];
       
-      // Empty slots for previous month
       for (let i = 0; i < firstDayOfMonth; i++) {
           days.push(<div key={`empty-${i}`} className="p-2"></div>);
       }
 
-      // Days
       for (let d = 1; d <= daysInMonth; d++) {
           const date = new Date(year, month, d);
           const isSelected = setupDate && isSameDay(date, setupDate);
@@ -172,13 +178,6 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
               <div className="grid grid-cols-7 gap-y-2">
                   {days}
               </div>
-              <div className="mt-3 text-center">
-                <p className="text-xs text-stone-500 font-medium">
-                    {setupDate 
-                        ? `Nascimento: ${setupDate.toLocaleDateString()}` 
-                        : 'Selecione o dia do nascimento'}
-                </p>
-              </div>
           </div>
       );
   };
@@ -209,67 +208,112 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
             </div>
         </div>
 
-        <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-stone-800 mb-2">
-                {step === 0 ? 'Bem-vinda' : 'Configurar Perfil'}
-            </h1>
-            <p className="text-stone-500">
-                {step === 0 
-                    ? 'Insira seu código de acesso para entrar.' 
-                    : 'Vamos personalizar o cantinho do seu bebê.'}
-            </p>
-        </div>
+        {step === 'INITIAL' && (
+            <div className="space-y-4 animate-fade-in">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-stone-800 mb-2">Bem-vinda</h1>
+                    <p className="text-stone-500">Seu refúgio de maternidade leve e acolhedora.</p>
+                </div>
+                
+                <button 
+                    onClick={() => setStep('LOGIN')}
+                    className="w-full bg-stone-800 text-white rounded-2xl py-4 font-bold text-lg shadow-lg shadow-stone-200 hover:bg-stone-700 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                    Já tenho um código <ArrowRight size={20} />
+                </button>
+                <button 
+                    onClick={handleGenerateCode}
+                    className="w-full bg-white text-stone-600 border-2 border-stone-100 rounded-2xl py-4 font-bold text-lg hover:bg-stone-50 active:scale-95 transition-all"
+                >
+                    {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Sou nova por aqui'}
+                </button>
+            </div>
+        )}
 
-        {step === 0 ? (
-            // --- FORMULÁRIO DE CÓDIGO ---
-            <form onSubmit={handleCodeSubmit} className="space-y-6">
-                <div>
-                    <div className="relative group">
-                        <input 
+        {step === 'LOGIN' && (
+            <form onSubmit={handleLogin} className="space-y-4 animate-fade-in">
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-stone-800">Acessar Ninho</h2>
+                    <p className="text-sm text-stone-500">Digite seu código de acesso pessoal.</p>
+                </div>
+
+                <div className="relative">
+                    <input 
                         type="text" 
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        className="w-full bg-white rounded-2xl px-6 py-5 pl-14 outline-none border-2 border-stone-100 focus:border-rose-300 focus:ring-4 focus:ring-rose-50 transition-all text-lg font-mono text-stone-800 placeholder-stone-300 tracking-widest shadow-sm"
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                        className="w-full bg-stone-50 rounded-2xl px-6 py-4 pl-12 font-mono text-lg tracking-widest uppercase outline-none border border-transparent focus:border-rose-300 focus:bg-white transition-all text-center"
                         placeholder="CÓDIGO"
-                        autoCapitalize="none"
-                        disabled={isLoading}
-                        />
-                        <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-rose-400 transition-colors" size={22} />
-                    </div>
+                        autoFocus
+                    />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
                 </div>
 
                 <button 
                     type="submit"
-                    disabled={isLoading || !code}
-                    className="w-full bg-stone-800 text-white rounded-2xl py-4 font-bold text-lg shadow-lg shadow-stone-200 hover:bg-stone-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group"
+                    disabled={!accessCode || isLoading}
+                    className="w-full bg-stone-800 text-white rounded-2xl py-4 font-bold text-lg shadow-lg shadow-stone-200 hover:bg-stone-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
                 >
-                    {isLoading ? <Loader2 className="animate-spin" /> : (
-                        <>Entrar <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" /></>
-                    )}
+                    {isLoading ? <Loader2 className="animate-spin" /> : <>Entrar <ArrowRight size={20} /></>}
+                </button>
+                <button 
+                    type="button" 
+                    onClick={() => setStep('INITIAL')}
+                    className="w-full text-stone-400 text-sm font-bold py-2 hover:text-stone-600"
+                >
+                    Voltar
                 </button>
             </form>
-        ) : (
-            // --- FORMULÁRIO DE PRIMEIRO ACESSO (PERFIL) ---
+        )}
+
+        {step === 'CODE_DISPLAY' && (
+             <div className="space-y-6 animate-fade-in text-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-stone-800 mb-2">Seu Código Pessoal</h2>
+                    <p className="text-sm text-stone-500 px-4">Guarde este código com carinho. É a única chave para acessar seu diário em qualquer dispositivo.</p>
+                </div>
+
+                <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-6 relative group">
+                    <span className="text-3xl font-mono font-bold text-rose-500 tracking-widest">{generatedCode}</span>
+                    <button 
+                        onClick={copyToClipboard}
+                        className="absolute top-1/2 -translate-y-1/2 right-4 p-2 text-rose-300 hover:text-rose-500 transition-colors"
+                    >
+                        <Copy size={20} />
+                    </button>
+                </div>
+
+                <button 
+                    onClick={() => setStep('SETUP')}
+                    className="w-full bg-stone-800 text-white rounded-2xl py-4 font-bold text-lg shadow-lg shadow-stone-200 hover:bg-stone-700 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                    Guardei, continuar <ArrowRight size={20} />
+                </button>
+             </div>
+        )}
+
+        {step === 'SETUP' && (
             <form onSubmit={handleSetupSubmit} className="space-y-4 animate-fade-in">
-                 {/* Name Input */}
-                 <div className="relative">
+                <div className="text-center mb-4">
+                    <h2 className="text-xl font-bold text-stone-800">Quem vamos amar?</h2>
+                </div>
+
+                <div className="relative">
                     <input 
-                      type="text" 
-                      value={setupName}
-                      onChange={(e) => setSetupName(e.target.value)}
-                      className="w-full bg-stone-50 rounded-2xl px-6 py-4 pl-12 outline-none border border-transparent focus:border-rose-300 focus:bg-white transition-all"
-                      placeholder="Nome do Bebê"
-                      required
+                        type="text" 
+                        value={setupName}
+                        onChange={(e) => setSetupName(e.target.value)}
+                        className="w-full bg-stone-50 rounded-2xl px-6 py-4 pl-12 outline-none border border-transparent focus:border-rose-300 focus:bg-white transition-all"
+                        placeholder="Nome do Bebê"
+                        required
                     />
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
                 </div>
 
-                {/* Calendar Input */}
                 <div className="relative">
                     {renderCalendar()}
                 </div>
 
-                {/* Gender Select */}
                 <div className="flex gap-3">
                     <button
                         type="button"
@@ -300,7 +344,7 @@ const WelcomeScreen: React.FC<Props> = ({ onLoginSuccess, onAdminLogin }) => {
                     disabled={isLoading}
                     className="w-full bg-stone-800 text-white rounded-2xl py-4 font-bold text-lg shadow-lg shadow-stone-200 hover:bg-stone-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70 mt-2"
                 >
-                    {isLoading ? <Loader2 className="animate-spin" /> : <>Começar Jornada <ArrowRight size={20} /></>}
+                    {isLoading ? <Loader2 className="animate-spin" /> : <>Finalizar <ArrowRight size={20} /></>}
                 </button>
             </form>
         )}
