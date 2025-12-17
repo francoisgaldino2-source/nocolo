@@ -40,21 +40,23 @@
         overflow-x: hidden;
         -webkit-tap-highlight-color: transparent;
       }
-      #root { min-height: 100vh; }
+      #root { min-height: 100vh; display: flex; flex-direction: column; }
       
-      /* Placeholder de carregamento visual */
+      /* Placeholder de carregamento enquanto o JS não monta */
       #root:empty::after {
-        content: "Carregando Ninho...";
+        content: "Ninho";
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100vh;
         color: #bfa094;
-        font-weight: bold;
-        font-size: 1.1rem;
+        font-weight: 700;
+        font-size: 2rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
         animation: pulse 1.5s infinite;
       }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      @keyframes pulse { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.05); } }
       
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -77,7 +79,5 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- Script principal que inicia a aplicação React -->
-    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
