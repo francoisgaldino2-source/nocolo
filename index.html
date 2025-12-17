@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Ninho - Maternidade Leve</title>
     <script>
-      // Suprime o aviso de produção do Tailwind CDN ANTES de carregar o script
+      // Suprime o aviso de produção do Tailwind CSS CDN
       (function() {
         const originalWarn = console.warn;
-        console.warn = (...args) => {
-          if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+        console.warn = function(...args) {
+          if (args[0] && typeof args[0] === 'string' && (args[0].includes('cdn.tailwindcss.com') || args[0].includes('Tailwind CSS in production'))) {
+            return;
+          }
           originalWarn.apply(console, args);
         };
       })();
