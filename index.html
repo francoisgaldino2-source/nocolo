@@ -4,18 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Ninho - Maternidade Leve</title>
-    <script>
-      // Suprime avisos do Tailwind CDN no console
-      (function() {
-        const originalWarn = console.warn;
-        console.warn = function(...args) {
-          if (args[0] && typeof args[0] === 'string' && (args[0].includes('cdn.tailwindcss.com') || args[0].includes('Tailwind CSS in production'))) {
-            return;
-          }
-          originalWarn.apply(console, args);
-        };
-      })();
-    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -28,9 +16,14 @@
               sage: { 50: '#f2fcf5', 100: '#e6f7eb', 200: '#ccebd6', 500: '#68b383' }
             },
             fontFamily: { sans: ['Nunito', 'sans-serif'] },
-            animation: { 'breathe': 'breathe 8s infinite ease-in-out', 'float': 'float 6s ease-in-out infinite' },
+            animation: { 
+              'breathe': 'breathe 8s infinite ease-in-out', 
+              'float': 'float 6s ease-in-out infinite',
+              'fade-in': 'fadeIn 0.5s ease-out forwards'
+            },
             keyframes: {
-              breathe: { '0%, 100%': { transform: 'scale(1)', opacity: '0.8' }, '50%': { transform: 'scale(1.5)', opacity: '0.4' } },
+              fadeIn: { 'from': { opacity: '0' }, 'to': { opacity: '1' } },
+              breathe: { '0%, 100%': { transform: 'scale(1)', opacity: '0.8' }, '50%': { transform: 'scale(1.2)', opacity: '0.4' } },
               float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
             }
           },
@@ -48,25 +41,23 @@
         -webkit-tap-highlight-color: transparent;
       }
       #root { min-height: 100vh; }
+      
+      /* Placeholder de carregamento enquanto o JS não monta */
+      #root:empty::after {
+        content: "Carregando Ninho...";
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: #bfa094;
+        font-weight: bold;
+        font-size: 1.2rem;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
-      /* Prevenção de tela branca durante o carregamento do módulo */
-      #root:empty::before {
-        content: "";
-        display: block;
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f2e8e5;
-        border-top: 4px solid #bfa094;
-        border-radius: 50%;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin: -20px 0 0 -20px;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
   <script type="importmap">
 {
